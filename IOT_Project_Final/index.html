@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weather Station Data</title>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+  </head>
+  <body>
+    <h1>Weather Station Data</h1>
+
+    <!-- Chart containers for each data column -->
+    <div class="charts-container">
+      <div class="chart-container">
+        <canvas id="temperatureChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="humidityChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="pressureChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="altitudeChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="soilMoistureChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="raindropChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Data table below charts -->
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Temperature (°C)</th>
+          <th>Humidity (%)</th>
+          <th>Pressure (hPa)</th>
+          <th>Altitude (m)</th>
+          <th>Soil Moisture</th>
+          <th>Raindrop</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Data rows will be inserted here -->
+      </tbody>
+    </table>
+
+    <script type="module">
+      // Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyBqb9knfervovfrLO2okk9wVIRhKMYLxyU",
+        authDomain: "weatherstation-aef29.firebaseapp.com",
+        databaseURL:
+          "https://weatherstation-aef29-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "weatherstation-aef29",
+        storageBucket: "weatherstation-aef29.firebasestorage.app",
+        messagingSenderId: "63893759007",
+        appId: "1:63893759007:web:4bc1a55d54a34dd9f1212a",
+        measurementId: "G-KGPRCQE1HW",
+      };
+
+      // Initialize Firebase
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+      import {
+        getDatabase,
+        ref,
+        get,
+      } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+
+      // Fetch data from Firebase and update the table and charts
+      function fetchData() {
+        // const dbRef = ref(db, 'data1');
+        // const dbRef = ref(db, 'data2');
+        // const dbRef = ref(db, 'data3');
+        const dbRef = ref(db, "data5");
+        get(dbRef)
+          .then((snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.val();
+              const dataEntries = Object.entries(data);
+              const last10Entries = dataEntries.slice(-10); // Get last 10 entries
+
+              updateTable(data);
+              updateCharts(last10Entries);
+            } else {
+              console.log("No data available");
+            }
+          })
+          .catch((error) => {
+            console.log("Error getting data:", error);
+          });
+      }
+      // Function to update the table with the data
+      function updateTable(data) {
+        const tableBody = document.querySelector("#dataTable tbody");
+        tableBody.innerHTML = ""; // Clear the table body
+
+        // Iterate through the data and create rows
+        for (const id in data) {
+          const row = document.createElement("tr");
+
+          const cellId = document.createElement("td");
+          cellId.textContent = id;
+          row.appendChild(cellId);
+
+          const cellTemp = document.createElement("td");
+          cellTemp.textContent = data[id].temperature;
+          row.appendChild(cellTemp);
+
+          const cellHumidity = document.createElement("td");
+          cellHumidity.textContent = data[id].humidity;
+          row.appendChild(cellHumidity);
+
+          const cellPressure = document.createElement("td");
+          cellPressure.textContent = data[id].pressure;
+          row.appendChild(cellPressure);
+
+          const cellAltitude = document.createElement("td");
+          cellAltitude.textContent = data[id].altitude;
+          row.appendChild(cellAltitude);
+
+          const cellSoilMoisture = document.createElement("td");
+          cellSoilMoisture.textContent = data[id].soil_moisture;
+          row.appendChild(cellSoilMoisture);
+
+          const cellRaindrop = document.createElement("td");
+          cellRaindrop.textContent = data[id].raindrop;
+          row.appendChild(cellRaindrop);
+
+          tableBody.appendChild(row); // Append the row to the table body
+        }
+      }
+
+      // Function to update the charts
+      function updateCharts(data) {
+        const labels = data.map(([id]) => id); // Get the IDs as labels
+        const temperatureData = data.map(([_, values]) => values.temperature);
+        const humidityData = data.map(([_, values]) => values.humidity);
+        const pressureData = data.map(([_, values]) => values.pressure);
+        const altitudeData = data.map(([_, values]) => values.altitude);
+        const soilMoistureData = data.map(
+          ([_, values]) => values.soil_moisture
+        );
+        const raindropData = data.map(([_, values]) => values.raindrop);
+
+        // Create charts for each dataset
+        createChart(
+          "temperatureChart",
+          labels,
+          "Temperature (°C)",
+          temperatureData
+        );
+        createChart("humidityChart", labels, "Humidity (%)", humidityData);
+        createChart("pressureChart", labels, "Pressure (hPa)", pressureData);
+        createChart("altitudeChart", labels, "Altitude (m)", altitudeData);
+        createChart(
+          "soilMoistureChart",
+          labels,
+          "Soil Moisture",
+          soilMoistureData
+        );
+        createChart("raindropChart", labels, "Raindrop", raindropData);
+      }
+
+      // Helper function to create a chart
+      function createChart(canvasId, labels, label, data) {
+        const ctx = document.getElementById(canvasId).getContext("2d");
+        new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: label,
+                data: data,
+                borderColor: "rgba(75, 192, 192, 1)",
+                backgroundColor: "rgba(75, 192, 192, 0.2)",
+                borderWidth: 1,
+                fill: true,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false, // Allow charts to be smaller
+            scales: {
+              y: {
+                beginAtZero: true,
+              },
+            },
+          },
+        });
+      }
+
+      // Fetch data when the page loads
+      // window.onload = fetchData;
+      window.onload = () => {
+        fetchData();
+        setInterval(fetchData, 10000); // Refresh every 10 seconds
+      };
+    </script>
+  </body>
+</html>

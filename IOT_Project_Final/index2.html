@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weather Station Data</title>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+  </head>
+  <body>
+    <h1>Weather Station Data</h1>
+
+    <!-- Chart containers for each data node -->
+    <div id="chartsContainer" class="charts-container"></div>
+
+    <script type="module">
+      // Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyBqb9knfervovfrLO2okk9wVIRhKMYLxyU",
+        authDomain: "weatherstation-aef29.firebaseapp.com",
+        databaseURL:
+          "https://weatherstation-aef29-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "weatherstation-aef29",
+        storageBucket: "weatherstation-aef29.firebasestorage.app",
+        messagingSenderId: "63893759007",
+        appId: "1:63893759007:web:4bc1a55d54a34dd9f1212a",
+        measurementId: "G-KGPRCQE1HW",
+      };
+
+      // Initialize Firebase
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+      import {
+        getDatabase,
+        ref,
+        get,
+      } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+
+      // Data points
+      const dataPoints = ["data2", "data3", "data4", "data5", "data6"];
+
+      // Fetch data and create charts for each data node
+      async function fetchData() {
+        const chartsContainer = document.getElementById("chartsContainer");
+        chartsContainer.innerHTML = ""; // Clear previous charts
+
+        for (const point of dataPoints) {
+          const dbRef = ref(db, point);
+          const snapshot = await get(dbRef);
+          if (snapshot.exists()) {
+            const dataEntries = Object.entries(snapshot.val()).slice(-10); // Get the last 10 entries
+            createRowCharts(point, dataEntries);
+          } else {
+            console.log(`No data available for ${point}`);
+          }
+        }
+      }
+
+      // Function to create a row of charts for each data node
+      function createRowCharts(nodeId, dataEntries) {
+        const rowDiv = document.createElement("div");
+        rowDiv.classList.add("chart-row");
+
+        // Extracting individual data arrays from the entries
+        const labels = dataEntries.map(([key]) => key);
+        const temperatureData = dataEntries.map(
+          ([_, values]) => values.temperature
+        );
+        const humidityData = dataEntries.map(([_, values]) => values.humidity);
+        const pressureData = dataEntries.map(([_, values]) => values.pressure);
+        const altitudeData = dataEntries.map(([_, values]) => values.altitude);
+        const soilMoistureData = dataEntries.map(
+          ([_, values]) => values.soil_moisture
+        );
+        const raindropData = dataEntries.map(([_, values]) => values.raindrop);
+
+        const metrics = [
+          { label: "Temperature (°C)", data: temperatureData },
+          { label: "Humidity (%)", data: humidityData },
+          { label: "Pressure (hPa)", data: pressureData },
+          { label: "Altitude (m)", data: altitudeData },
+          { label: "Soil Moisture", data: soilMoistureData },
+          { label: "Raindrop", data: raindropData },
+        ];
+
+        metrics.forEach((metric) => {
+          const chartContainer = document.createElement("div");
+          chartContainer.classList.add("chart-container");
+
+          const canvas = document.createElement("canvas");
+          chartContainer.appendChild(canvas);
+          rowDiv.appendChild(chartContainer);
+
+          createChart(
+            canvas,
+            labels,
+            `${nodeId} - ${metric.label}`,
+            metric.data
+          );
+        });
+
+        document.getElementById("chartsContainer").appendChild(rowDiv);
+      }
+
+      // Helper function to create a chart
+      function createChart(canvas, labels, label, data) {
+        new Chart(canvas.getContext("2d"), {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: label,
+                data: data,
+                borderColor: "rgba(75, 192, 192, 1)",
+                backgroundColor: "rgba(75, 192, 192, 0.2)",
+                borderWidth: 1,
+                fill: true,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+              },
+            },
+          },
+        });
+      }
+
+      // Fetch data when the page loads
+      window.onload = () => {
+        fetchData();
+        setInterval(fetchData, 10000); // Refresh every 10 seconds
+      };
+    </script>
+
+    <style>
+      /* CSS for layout */
+      .charts-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .chart-row {
+        display: flex;
+        justify-content: space-around;
+        gap: 15px;
+      }
+
+      .chart-container {
+        width: 200px;
+        height: 150px;
+      }
+    </style>
+    <button onclick="location.href='index1.html';">Average Metrics</button>
+  </body>
+</html>

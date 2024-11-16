@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weather Station Data</title>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      .charts-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .chart-container {
+        width: 300px;
+        height: 200px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Weather Station Average Values</h1>
+
+    <div class="charts-container">
+      <div class="chart-container">
+        <canvas id="temperatureChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="humidityChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="pressureChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="altitudeChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="soilMoistureChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="raindropChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="averageChart"></canvas>
+      </div>
+      <div></div>
+    </div>
+
+    <script type="module">
+      const firebaseConfig = {
+        apiKey: "AIzaSyBqb9knfervovfrLO2okk9wVIRhKMYLxyU",
+        authDomain: "weatherstation-aef29.firebaseapp.com",
+        databaseURL:
+          "https://weatherstation-aef29-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "weatherstation-aef29",
+        storageBucket: "weatherstation-aef29.firebasestorage.app",
+        messagingSenderId: "63893759007",
+        appId: "1:63893759007:web:4bc1a55d54a34dd9f1212a",
+        measurementId: "G-KGPRCQE1HW",
+      };
+
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+      import {
+        getDatabase,
+        ref,
+        get,
+      } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+      const datasets = ["data2", "data3", "data4", "data5", "data6"];
+      const datasetMetrics = {}; // Store data metrics for each dataset
+
+      function fetchData() {
+        const fetchPromises = datasets.map((dataset) =>
+          fetchDataForDataset(dataset)
+        );
+        Promise.all(fetchPromises).then(displayCharts);
+      }
+
+      function fetchDataForDataset(dataset) {
+        const dbRef = ref(db, dataset);
+        return get(dbRef)
+          .then((snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.val();
+              const lastEntry = Object.entries(data).slice(-1)[0][1]; // Get the latest entry only
+              datasetMetrics[dataset] = lastEntry;
+            } else {
+              console.log(`No data available for ${dataset}`);
+            }
+          })
+          .catch((error) => console.log(`Error fetching ${dataset}:`, error));
+      }
+
+      function displayCharts() {
+        const metrics = [
+          "temperature",
+          "humidity",
+          "pressure",
+          "altitude",
+          "soil_moisture",
+          "raindrop",
+        ];
+        const metricData = {
+          temperature: [],
+          humidity: [],
+          pressure: [],
+          altitude: [],
+          soil_moisture: [],
+          raindrop: [],
+        };
+
+        // Gather data for each metric across datasets
+        datasets.forEach((dataset) => {
+          metrics.forEach((metric) => {
+            metricData[metric].push(datasetMetrics[dataset][metric]);
+          });
+        });
+
+        // Calculate averages for each metric
+        const avgData = metrics.map((metric) => {
+          const total = metricData[metric].reduce(
+            (sum, value) => sum + value,
+            0
+          );
+          return total / datasets.length;
+        });
+
+        // Display individual charts for each metric
+        createChart(
+          "temperatureChart",
+          datasets,
+          "Temperature (°C)",
+          metricData.temperature
+        );
+        createChart(
+          "humidityChart",
+          datasets,
+          "Humidity (%)",
+          metricData.humidity
+        );
+        createChart(
+          "pressureChart",
+          datasets,
+          "Pressure (hPa)",
+          metricData.pressure
+        );
+        createChart(
+          "altitudeChart",
+          datasets,
+          "Altitude (m)",
+          metricData.altitude
+        );
+        createChart(
+          "soilMoistureChart",
+          datasets,
+          "Soil Moisture",
+          metricData.soil_moisture
+        );
+        createChart("raindropChart", datasets, "Raindrop", metricData.raindrop);
+
+        // Display average chart
+        //createChart("averageChart", metrics, "Average Metrics", avgData);
+      }
+
+      function createChart(canvasId, labels, label, data) {
+        const ctx = document.getElementById(canvasId).getContext("2d");
+        new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: label,
+                data: data,
+                backgroundColor: "rgba(75, 192, 192, 0.2)",
+                borderColor: "rgba(75, 192, 192, 1)",
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      window.onload = fetchData;
+    </script>
+  </body>
+</html>
